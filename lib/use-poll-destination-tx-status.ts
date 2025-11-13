@@ -49,7 +49,7 @@ export function usePollDestinationTxStatus(
         let explorerBaseUrl: string;
         let tokenAddress: string;
         if (network === "Devnet") {
-          explorerBaseUrl = "https://explorer.xrplevm.org/api/v2/addresses";
+          explorerBaseUrl = "https://explorer.devnet.xrplevm.org/api/v2/addresses";
           tokenAddress = "0xD4949664cD82660AaE99bEdc034a0deA8A0bd517";
         } else {
           explorerBaseUrl = "https://explorer.testnet.xrplevm.org/api/v2/addresses";

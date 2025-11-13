@@ -25,8 +25,8 @@ const DEVNET_CONFIG = {
     symbol: "XRP",
     decimals: 18,
   },
-  rpcUrls: ["https://rpc.xrplevm.org/"],
-  blockExplorerUrls: ["https://explorer.xrplevm.org"],
+  rpcUrls: ["https://rpc.devnet.xrplevm.org/"],
+  blockExplorerUrls: ["https://explorer.devnet.xrplevm.org"],
 };
 
 const TESTNET_CONFIG = {
