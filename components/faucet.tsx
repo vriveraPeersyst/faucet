@@ -12,7 +12,7 @@ import { Input } from "./ui/input";
 import Link from "next/link";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
 
-export type NetworkType = "Devnet" | "Testnet";
+export type NetworkType = "Testnet";
 
 interface FaucetProps {
   network: NetworkType;
@@ -45,7 +45,7 @@ export function Faucet({ network, setNetwork, evmAddressFromHeader }: FaucetProp
   const ethereum = getEthereumProvider();
   const hasMetaMask: boolean = Boolean(ethereum);
 
-  const getXrp = useGetXrp(network.toLowerCase() as "devnet" | "testnet");
+  const getXrp = useGetXrp(network.toLowerCase() as "testnet");
 
   useEffect(() => {
     setEvmAddress(evmAddressFromHeader || "");
@@ -109,7 +109,7 @@ export function Faucet({ network, setNetwork, evmAddressFromHeader }: FaucetProp
   };
 
   function getDesiredChainId(network: NetworkType): string {
-    return network === "Devnet" ? "0x" + Number(1440002).toString(16) : "0x" + Number(1449000).toString(16);
+    return "0x" + Number(1449000).toString(16);
   }
   const desiredChainId: string = getDesiredChainId(network);
   const isOnDesiredChain: boolean = !!chainId && chainId.toLowerCase() === desiredChainId.toLowerCase();
@@ -232,21 +232,7 @@ export function Faucet({ network, setNetwork, evmAddressFromHeader }: FaucetProp
             <MetamaskButton className="h-10" network={network} />
           )}
         </div>
-        <div className="flex flex-col items-center gap-2">
-          <label htmlFor="network" className="font-semibold">
-            Select Network
-          </label>
 
-          <Select value={network} onValueChange={(value: string) => setNetwork(value as NetworkType)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Network" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Devnet">Devnet</SelectItem>
-              <SelectItem value="Testnet">Testnet</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
         <div className="flex flex-col items-center gap-1">
           <label htmlFor="evmAddress" className="font-semibold">
             Your Address

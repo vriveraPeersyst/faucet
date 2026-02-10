@@ -18,7 +18,7 @@ const MAX_POLL_ATTEMPTS = 300; // maximum attempts
  * @param destinationAddress - The user's 0x address receiving funds.
  * @param sourceCloseTimeIso - The close_time_iso from the XRPL transaction.
  * @param txHash - The original XRPL transaction hash.
- * @param network - Either "Devnet" or "Testnet".
+ * @param network - Testnet.
  *
  * @returns An object with:
  *  - status: "Pending", "Arrived", "Timeout", or "Failed"
@@ -29,7 +29,7 @@ export function usePollDestinationTxStatus(
   destinationAddress: string,
   sourceCloseTimeIso: string,
   txHash: string,
-  network: "Devnet" | "Testnet"
+  network: "Testnet"
 ) {
   const [status, setStatus] = useState<"Pending" | "Arrived" | "Timeout" | "Failed">("Pending");
   const [destinationTxHash, setDestinationTxHash] = useState<string | null>(null);
@@ -46,15 +46,8 @@ export function usePollDestinationTxStatus(
 
       try {
         // 1) Construct the explorer API URL based on network.
-        let explorerBaseUrl: string;
-        let tokenAddress: string;
-        if (network === "Devnet") {
-          explorerBaseUrl = "https://explorer.xrplevm.org/api/v2/addresses";
-          tokenAddress = "0xD4949664cD82660AaE99bEdc034a0deA8A0bd517";
-        } else {
-          explorerBaseUrl = "https://explorer.testnet.xrplevm.org/api/v2/addresses";
-          tokenAddress = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
-        }
+        const explorerBaseUrl = "https://explorer.testnet.xrplevm.org/api/v2/addresses";
+        const tokenAddress = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
         const url =
           `${explorerBaseUrl}/${destinationAddress}/token-transfers` +
           `?type=ERC-20` +
