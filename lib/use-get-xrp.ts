@@ -1,12 +1,6 @@
 import { Client, Payment, Wallet, xrpToDrops } from "xrpl";
 
 const networks = {
-  devnet: {
-    faucet: "https://faucet.devnet.rippletest.net/accounts",
-    bridgeGateway: "rGAbJZEzU6WaYv5y1LfyN7LBBcQJ3TxsKC",
-    bridgeNetwork: "xrpl-evm-devnet",
-    wsUrl: "wss://s.devnet.rippletest.net:51233/",
-  },
   testnet: {
     faucet: "https://faucet.altnet.rippletest.net/accounts",
     bridgeGateway: "rNrjh1KGZk2jBR3wPfAQnoidtFFYQKbQn2",
@@ -17,7 +11,7 @@ const networks = {
 
 const reserve = 1;
 
-export type Network = "devnet" | "testnet";
+export type Network = "testnet";
 
 export const useGetXrp = (network: Network) => {
   return async function (destination: string) {

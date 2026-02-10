@@ -17,18 +17,6 @@ declare global {
 const INSTALL_METAMASK_URL = "https://docs.xrplevm.org/pages/users/getting-started/install-metamask";
 
 // ✅ Quick config references:
-const DEVNET_CONFIG = {
-  chainId: "0x" + Number(1440002).toString(16),
-  chainName: "XRPL EVM Sidechain Devnet",
-  nativeCurrency: {
-    name: "XRP",
-    symbol: "XRP",
-    decimals: 18,
-  },
-  rpcUrls: ["https://rpc.xrplevm.org/"],
-  blockExplorerUrls: ["https://explorer.xrplevm.org"],
-};
-
 const TESTNET_CONFIG = {
   chainId: "0x" + Number(1449000).toString(16),
   chainName: "XRPL EVM Sidechain Testnet",
@@ -41,7 +29,7 @@ const TESTNET_CONFIG = {
   blockExplorerUrls: ["https://explorer.testnet.xrplevm.org"],
 };
 
-type NetworkType = "Devnet" | "Testnet";
+type NetworkType = "Testnet";
 
 /** 
  * ✅ Common logic for requesting a network add/switch in MetaMask
@@ -53,7 +41,7 @@ async function addNetworkToMetamask(network: NetworkType) {
     return;
   }
 
-  const selectedConfig = network === "Devnet" ? DEVNET_CONFIG : TESTNET_CONFIG;
+  const selectedConfig = TESTNET_CONFIG;
 
   try {
     await window.ethereum.request({

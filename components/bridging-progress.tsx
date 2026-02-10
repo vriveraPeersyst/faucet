@@ -7,11 +7,8 @@ import { cn } from "@/lib/utils";
 const FACTS = [
   "XRP on XRPL has 1 million drops per XRP (6 decimals), on XRPL EVM it has 18 decimals.",
   "XRPL EVM Testnet chain id is 1449000.",
-  "XRPL EVM Devnet chain id is 1440002.",
   "XRPL Testnet's chain id in Axelar is xrpl.",
-  "XRPL Devnet's chain id in Axelar is xrpl-dev.",
   "XRPL EVM Testnet's chain id in Axelar is xrpl-evm.",
-  "XRPL EVM Devnet's chain id in Axelar is xrpl-evm-devnet.",
   "All OpenZeppelin contracts can be used and deployed on the XRPL EVM.",
   "XRPL EVM's current EVM Version is Paris.",
   "XRPL EVM is a Cosmos-SDK blockchain with an EVM module by Evmos.",
