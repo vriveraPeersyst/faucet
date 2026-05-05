@@ -35,7 +35,7 @@ The Testnet flow works without any env vars. The Devnet flow requires `DEVNET_FA
 
 ### `POST /api/devnet-faucet`
 
-Mints 100 XRP to the supplied address on XRPL EVM Devnet.
+Submits a `mint(address, 100e18)` transaction on XRPL EVM Devnet and returns the broadcast hash. Confirmation is the client's job — see `lib/use-poll-devnet-tx-status.ts`, which polls `eth_getTransactionReceipt` against the public RPC every 2s for up to ~2 min.
 
 Request:
 ```json
@@ -49,9 +49,7 @@ Response (200):
 
 Errors:
 - `400` — invalid JSON body or invalid EVM address
-- `500` — `DEVNET_FAUCET_PRIVATE_KEY` not configured, mint reverted, or RPC error
-
-The route waits up to 30s for the mint receipt before responding. If the receipt times out, the response still returns the submitted hash so the client can link to the explorer.
+- `500` — `DEVNET_FAUCET_PRIVATE_KEY` not configured or `writeContract` rejected (e.g. signer lacks mint permission, RPC down)
 
 ## Environment variables
 
@@ -81,6 +79,7 @@ components/
 lib/
   use-get-xrp.ts                 Testnet bridge flow (XRPL faucet → bridge payment)
   use-mint-xrp.ts                Devnet flow (POST to API route)
+  use-poll-devnet-tx-status.ts        eth_getTransactionReceipt polling (Devnet only)
   use-poll-destination-tx-status.ts   Axelar + explorer polling (Testnet only)
 ```
 

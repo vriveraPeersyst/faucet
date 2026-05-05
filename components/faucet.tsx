@@ -7,6 +7,7 @@ import { MetamaskButton } from "./metamask-button";
 import { useGetXrp } from "@/lib/use-get-xrp";
 import { useMintXrp } from "@/lib/use-mint-xrp";
 import { usePollDestinationTxStatus } from "../lib/use-poll-destination-tx-status";
+import { usePollDevnetTxStatus } from "@/lib/use-poll-devnet-tx-status";
 import type { MetaMaskInpageProvider } from "@metamask/providers";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "./ui/select";
 import { Input } from "./ui/input";
@@ -57,7 +58,9 @@ export function Faucet({ network, setNetwork, evmAddressFromHeader }: FaucetProp
   const [showTxModal, setShowTxModal] = useState<boolean>(false);
   const [showInvalidAddressModal, setShowInvalidAddressModal] = useState<boolean>(false);
   const [chainId, setChainId] = useState<string | null>(null);
-  const [devnetStatus, setDevnetStatus] = useState<"Pending" | "Arrived" | "Failed">("Pending");
+  // Pre-submit failure state (e.g. mint API call rejected before producing a hash).
+  // Once `devnetTxHash` is set, the polling hook becomes the source of truth.
+  const [devnetSubmitError, setDevnetSubmitError] = useState<boolean>(false);
   const [devnetTxHash, setDevnetTxHash] = useState<string | null>(null);
 
   const ethereum = getEthereumProvider();
@@ -65,6 +68,7 @@ export function Faucet({ network, setNetwork, evmAddressFromHeader }: FaucetProp
 
   const getXrp = useGetXrp("testnet");
   const mintXrp = useMintXrp();
+  const { status: devnetPollStatus } = usePollDevnetTxStatus(devnetTxHash ?? "");
 
   useEffect(() => {
     setEvmAddress(evmAddressFromHeader || "");
@@ -115,17 +119,16 @@ export function Faucet({ network, setNetwork, evmAddressFromHeader }: FaucetProp
 
     setLoading(true);
     if (network === "Devnet") {
-      setDevnetStatus("Pending");
+      setDevnetSubmitError(false);
       setDevnetTxHash(null);
       setTxData({ txHash: "", sourceCloseTimeIso: "" });
       setShowTxModal(true);
       try {
         const hash = await mintXrp(evmAddress);
-        setDevnetTxHash(hash);
-        setDevnetStatus("Arrived");
+        setDevnetTxHash(hash); // hands off to usePollDevnetTxStatus
       } catch (error: unknown) {
         console.error("Error minting devnet XRP:", error);
-        setDevnetStatus("Failed");
+        setDevnetSubmitError(true);
         alert("Error minting devnet XRP: " + (error instanceof Error ? error.message : String(error)));
       } finally {
         setLoading(false);
@@ -163,7 +166,11 @@ export function Faucet({ network, setNetwork, evmAddressFromHeader }: FaucetProp
     if (!txData) return null;
 
     const isDevnet = network === "Devnet";
-    const effectiveStatus = isDevnet ? devnetStatus : status;
+    const effectiveStatus = isDevnet
+      ? devnetSubmitError
+        ? "Failed"
+        : devnetPollStatus
+      : status;
     const effectiveTxHash = isDevnet ? devnetTxHash : destinationTxHash;
 
     let displayedStatus = "";
@@ -195,10 +202,14 @@ export function Faucet({ network, setNetwork, evmAddressFromHeader }: FaucetProp
         onOpenChange={(open) => {
           setShowTxModal(open);
           // Devnet has no rate-limit: let the user request again after closing a terminal-state modal.
-          if (!open && isDevnet && (devnetStatus === "Arrived" || devnetStatus === "Failed")) {
+          const terminal =
+            effectiveStatus === "Arrived" ||
+            effectiveStatus === "Failed" ||
+            effectiveStatus === "Timeout";
+          if (!open && isDevnet && terminal) {
             setTxData(null);
             setDevnetTxHash(null);
-            setDevnetStatus("Pending");
+            setDevnetSubmitError(false);
           }
         }}
       >

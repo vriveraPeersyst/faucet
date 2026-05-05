@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createPublicClient,
-  createWalletClient,
-  defineChain,
-  http,
-  isAddress,
-  parseEther,
-} from "viem";
+import { createWalletClient, defineChain, http, isAddress, parseEther } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
 export const runtime = "nodejs";
@@ -14,8 +7,6 @@ export const dynamic = "force-dynamic";
 
 const NATIVE_XRP_ERC20 = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE" as const;
 const MINT_AMOUNT = parseEther("100");
-// Receipt wait window — XRPL EVM finalises in ~5s, so 30s is generous.
-const RECEIPT_TIMEOUT_MS = 30_000;
 
 const xrplEvmDevnet = defineChain({
   id: 1449900,
@@ -58,40 +49,19 @@ export async function POST(req: NextRequest) {
   const pk = (rawKey.startsWith("0x") ? rawKey : `0x${rawKey}`) as `0x${string}`;
 
   const account = privateKeyToAccount(pk);
-  const transport = http();
-  const walletClient = createWalletClient({ account, chain: xrplEvmDevnet, transport });
-  const publicClient = createPublicClient({ chain: xrplEvmDevnet, transport });
+  const walletClient = createWalletClient({ account, chain: xrplEvmDevnet, transport: http() });
 
-  let txHash: `0x${string}`;
   try {
-    txHash = await walletClient.writeContract({
+    const txHash = await walletClient.writeContract({
       address: NATIVE_XRP_ERC20,
       abi: mintAbi,
       functionName: "mint",
       args: [address, MINT_AMOUNT],
     });
+    return NextResponse.json({ txHash });
   } catch (err) {
     console.error("[devnet-faucet] writeContract failed", err);
     const message = err instanceof Error ? err.message : "Mint submission failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  try {
-    const receipt = await publicClient.waitForTransactionReceipt({
-      hash: txHash,
-      timeout: RECEIPT_TIMEOUT_MS,
-    });
-    if (receipt.status !== "success") {
-      return NextResponse.json(
-        { error: "Mint reverted on-chain", txHash },
-        { status: 500 },
-      );
-    }
-  } catch (err) {
-    // Receipt timed out — the tx is still pending. Return the hash so the client
-    // can link to the explorer; not treating this as a hard error.
-    console.warn("[devnet-faucet] receipt wait timed out", err);
-  }
-
-  return NextResponse.json({ txHash });
 }
