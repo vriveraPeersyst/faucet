@@ -45,13 +45,15 @@ export function usePollDestinationTxStatus(
   destinationAddress: string,
   sourceCloseTimeIso: string,
   txHash: string,
-  network: "Testnet"
+  network: "Testnet" | "Devnet"
 ) {
   const [status, setStatus] = useState<"Pending" | "Arrived" | "Timeout" | "Failed">("Pending");
   const [destinationTxHash, setDestinationTxHash] = useState<string | null>(null);
   const [bridgingTimeMs, setBridgingTimeMs] = useState<number | null>(null);
 
   useEffect(() => {
+    // Devnet has no bridge — the EVM tx IS the result, so nothing to poll.
+    if (network !== "Testnet") return;
     if (!txHash) return;
 
     const startedAtMs = sourceCloseTimeIso ? new Date(sourceCloseTimeIso).getTime() : Date.now();
@@ -73,7 +75,7 @@ export function usePollDestinationTxStatus(
     const pollAxelar = async () => {
       if (arrived) return;
       try {
-        const url = `${AXELAR_API[network]}?txHash=${txHash}`;
+        const url = `${AXELAR_API.Testnet}?txHash=${txHash}`;
         const resp = await axios.get<AxelarResponse>(url);
         const records = resp.data?.data ?? [];
         console.log("[bridge-status][axelar] poll", { total: resp.data?.total, records: records.length });
@@ -115,7 +117,7 @@ export function usePollDestinationTxStatus(
       if (!destinationAddress || !sourceCloseTimeIso) return;
       try {
         const url =
-          `${EVM_EXPLORER_API[network]}/${destinationAddress}/token-transfers` +
+          `${EVM_EXPLORER_API.Testnet}/${destinationAddress}/token-transfers` +
           `?type=ERC-20` +
           `&filter=${destinationAddress}%20|%200x0000000000000000000000000000000000000000` +
           `&token=${NATIVE_TOKEN_ADDRESS}`;
