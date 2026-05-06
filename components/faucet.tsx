@@ -8,7 +8,7 @@ import { MetamaskButton } from "./metamask-button";
 import { BridgingProgress } from "./bridging-progress";
 import { useGetXrp } from "@/lib/use-get-xrp";
 import { useMintXrp } from "@/lib/use-mint-xrp";
-import { usePollDestinationTxStatus } from "../lib/use-poll-destination-tx-status";
+import { usePollDestinationTxStatus, type BridgeStep } from "../lib/use-poll-destination-tx-status";
 import { usePollDevnetTxStatus } from "@/lib/use-poll-devnet-tx-status";
 import type { MetaMaskInpageProvider } from "@metamask/providers";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle } from "./ui/alert-dialog";
@@ -140,7 +140,7 @@ export function Faucet({ network, setNetwork, evmAddressFromHeader }: FaucetProp
   const desiredChainId = "0x" + current.chainId.toString(16);
   const isOnDesiredChain = !!chainId && chainId.toLowerCase() === desiredChainId.toLowerCase();
 
-  const { status, destinationTxHash, bridgingTimeMs } = usePollDestinationTxStatus(
+  const { status, destinationTxHash, bridgingTimeMs, bridgeStep } = usePollDestinationTxStatus(
     evmAddress,
     txData ? txData.sourceCloseTimeIso : "",
     txData ? txData.txHash : "",
@@ -429,6 +429,7 @@ export function Faucet({ network, setNetwork, evmAddressFromHeader }: FaucetProp
         network={current}
         isDevnet={network === "Devnet"}
         bridgeStatus={status}
+        bridgeStep={bridgeStep}
         devnetStatus={devnetPollStatus}
         devnetSubmitError={devnetSubmitError}
         devnetTxHash={devnetTxHash}
@@ -628,6 +629,7 @@ interface TxModalProps {
   network: NetworkSpec;
   isDevnet: boolean;
   bridgeStatus: "Pending" | "Arrived" | "Failed" | "Timeout";
+  bridgeStep: BridgeStep;
   devnetStatus: "Pending" | "Arrived" | "Failed" | "Timeout";
   devnetSubmitError: boolean;
   devnetTxHash: string | null;
@@ -636,12 +638,27 @@ interface TxModalProps {
   onClose: () => void;
 }
 
+const BRIDGE_STEPS: { id: BridgeStep; label: string; sub: string }[] = [
+  { id: "submitted", label: "Submitted to XRPL", sub: "Source payment broadcast" },
+  { id: "confirmed", label: "Witnessed by Axelar", sub: "Validators confirmed the XRPL tx" },
+  { id: "approved", label: "Approved by gateway", sub: "Multisig signed the EVM relay" },
+  { id: "executed", label: "Delivered on XRPL EVM", sub: "Mint executed on destination" },
+];
+
+const BRIDGE_STEP_RANK: Record<BridgeStep, number> = {
+  submitted: 0,
+  confirmed: 1,
+  approved: 2,
+  executed: 3,
+};
+
 function TransactionStatusModal({
   open,
   onOpenChange,
   network,
   isDevnet,
   bridgeStatus,
+  bridgeStep,
   devnetStatus,
   devnetSubmitError,
   devnetTxHash,
@@ -694,25 +711,27 @@ function TransactionStatusModal({
             <span className={`text-xs font-semibold ${statusToneClass}`}>{statusLabel}</span>
           </div>
 
-          {isPending && (
+          {isPending && isDevnet && (
             <>
               <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-primary to-secondary"
                   style={{
-                    width: isDevnet && !devnetTxHash ? "20%" : "78%",
+                    width: devnetTxHash ? "78%" : "20%",
                     transition: "width 4s ease-out",
                   }}
                 />
               </div>
               <p className="text-xs text-white/45 mt-2">
-                {isDevnet
-                  ? devnetTxHash
-                    ? "Minting directly on devnet…"
-                    : "Submitting mint transaction…"
-                  : "Bridging from XRPL → XRPL EVM…"}
+                {devnetTxHash ? "Minting directly on devnet…" : "Submitting mint transaction…"}
               </p>
-              {!isDevnet && <BridgingProgress className="mt-2" />}
+            </>
+          )}
+
+          {isPending && !isDevnet && (
+            <>
+              <BridgeStepList currentStep={bridgeStep} />
+              <BridgingProgress className="mt-3" />
             </>
           )}
 
@@ -767,5 +786,69 @@ function TransactionStatusModal({
         )}
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+function BridgeStepList({ currentStep }: { currentStep: BridgeStep }) {
+  const currentRank = BRIDGE_STEP_RANK[currentStep];
+  return (
+    <ol className="flex flex-col gap-3 mt-1">
+      {BRIDGE_STEPS.map((step, idx) => {
+        const rank = BRIDGE_STEP_RANK[step.id];
+        const isDone = rank < currentRank;
+        const isCurrent = rank === currentRank;
+        const isLast = idx === BRIDGE_STEPS.length - 1;
+        return (
+          <li key={step.id} className="relative flex items-start gap-3">
+            {!isLast && (
+              <span
+                aria-hidden
+                className={`absolute left-[11px] top-6 bottom-[-12px] w-px ${
+                  isDone ? "bg-primary/50" : "bg-white/10"
+                }`}
+              />
+            )}
+            <span
+              aria-hidden
+              className={`relative size-[22px] shrink-0 rounded-full grid place-items-center transition-all ${
+                isDone
+                  ? "bg-primary text-white"
+                  : isCurrent
+                  ? "bg-primary/15 border border-primary/60"
+                  : "bg-white/[0.04] border border-white/10"
+              }`}
+            >
+              {isDone ? (
+                <svg
+                  viewBox="0 0 16 16"
+                  className="size-3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 8l3.5 3.5L13 5" />
+                </svg>
+              ) : isCurrent ? (
+                <span className="size-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_currentColor]" />
+              ) : (
+                <span className="size-1.5 rounded-full bg-white/25" />
+              )}
+            </span>
+            <div className="flex flex-col">
+              <span
+                className={`text-sm font-medium ${
+                  isCurrent ? "text-white" : isDone ? "text-white/70" : "text-white/40"
+                }`}
+              >
+                {step.label}
+              </span>
+              <span className="text-[11px] text-white/40">{step.sub}</span>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
